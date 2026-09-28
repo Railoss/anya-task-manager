@@ -1,0 +1,9 @@
+{
+  "name": "Планы Ани",
+  "short_name": "Планы Ани",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f6f3fb",
+  "theme_color": "#8f75b7",
+  "icons": [{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

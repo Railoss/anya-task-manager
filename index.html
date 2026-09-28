@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f6f3fb" />
+  <meta name="color-scheme" content="light" />
+  <meta name="description" content="Приватный local-first таск-менеджер Ани" />
+  <title>Планы Ани</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-row">
+        <div class="brand-mark">А</div>
+        <div><div class="brand-title">Планы Ани</div><div class="brand-subtitle">спокойно и по делу</div></div>
+      </div>
+      <nav class="main-nav" aria-label="Главная навигация">
+        <button class="nav-item is-active" data-view="today"><span>☀</span><span>Сегодня</span></button>
+        <button class="nav-item" data-view="board"><span>▦</span><span>Доска</span></button>
+        <button class="nav-item" data-view="calendar"><span>□</span><span>Календарь</span></button>
+        <button class="nav-item" data-view="backlog"><span>≡</span><span>Бэклог</span></button>
+        <button class="nav-item" data-view="archive"><span>⌁</span><span>Архив</span></button>
+      </nav>
+      <section class="sidebar-section">
+        <div class="section-title-row"><span class="section-kicker">Проекты</span><button class="icon-button" id="addProjectBtn" title="Добавить проект">＋</button></div>
+        <div id="projectList" class="project-list"></div>
+      </section>
+      <div class="sidebar-spacer"></div>
+      <button class="nav-item" data-view="settings"><span>⚙</span><span>Настройки</span></button>
+      <div class="sync-card" id="syncCard">
+        <div class="sync-dot" id="syncDot"></div>
+        <div class="sync-copy"><strong id="syncTitle">Загрузка…</strong><span id="syncSubtitle">Локальная база</span></div>
+        <button class="icon-button" id="quickSyncBtn" title="Синхронизировать">↻</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div><div class="eyebrow" id="viewEyebrow"></div><h1 id="viewTitle">Сегодня</h1></div>
+        <div class="topbar-actions">
+          <button class="secondary-button" id="installAppBtn">⇩ Установить ярлык</button>
+          <button class="secondary-button" id="syncNowBtn">↻ Синхронизировать</button>
+          <button class="primary-button" id="addTaskBtn">＋ Новая задача</button>
+          <button class="mobile-top-icon" id="mobileInstallBtn" aria-label="Установить ярлык" title="Установить ярлык">⇩</button>
+          <button class="mobile-top-icon" id="mobileSyncBtn" aria-label="Синхронизировать">↻</button>
+          <button class="mobile-top-icon" id="mobileSettingsBtn" aria-label="Настройки">⚙</button>
+        </div>
+      </header>
+      <section id="viewRoot" class="view-root"><div class="loading-state">Загружаю локальные данные…</div></section>
+    </main>
+
+    <nav class="mobile-nav" aria-label="Мобильная навигация">
+      <button class="mobile-nav-item is-active" data-view="today"><span>☀</span><small>Сегодня</small></button>
+      <button class="mobile-nav-item" data-view="board"><span>▦</span><small>Доска</small></button>
+      <button class="mobile-add" id="mobileAddTaskBtn" aria-label="Новая задача">＋</button>
+      <button class="mobile-nav-item" data-view="calendar"><span>□</span><small>Календарь</small></button>
+      <button class="mobile-nav-item" data-view="backlog"><span>≡</span><small>Бэклог</small></button>
+    </nav>
+  </div>
+
+  <div class="modal-backdrop" id="taskModalBackdrop" hidden>
+    <section class="modal task-modal" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
+      <div class="modal-header"><div><div class="eyebrow">Карточка</div><h2 id="taskModalTitle">Новая задача</h2></div><button class="icon-button" data-close="task">✕</button></div>
+      <form id="taskForm" class="form-grid">
+        <input type="hidden" id="taskId" />
+        <label class="field field-full"><span>Название</span><input id="taskTitle" required maxlength="160" placeholder="Что нужно сделать?" /></label>
+        <label class="field field-full"><span>Описание</span><textarea id="taskDescription" rows="3" placeholder="Необязательно"></textarea></label>
+        <label class="field"><span>Проект</span><select id="taskProject"></select></label>
+        <label class="field"><span>Тип</span><select id="taskContext"><option value="standalone">Точечная задача</option><option value="sprint">В спринте</option><option value="backlog">Бэклог</option></select></label>
+        <label class="field" id="taskSprintField" hidden><span>Спринт</span><select id="taskSprint"></select></label>
+        <label class="field"><span>Статус</span><select id="taskStatus"></select></label>
+        <label class="field"><span>Дата</span><input type="date" id="taskDate" /></label>
+        <label class="field"><span>Начало</span><input type="time" id="taskTime" /></label>
+        <label class="field"><span>Окончание</span><input type="time" id="taskEndTime" /></label>
+        <label class="field"><span>Приоритет</span><select id="taskPriority"><option value="normal">Обычный</option><option value="high">Высокий</option><option value="low">Низкий</option></select></label>
+        <label class="field"><span>Повторение</span><select id="taskRecurrence"><option value="none">Не повторять</option><option value="daily">Каждый день</option><option value="weekly">Каждую неделю</option><option value="monthly">Каждый месяц</option><option value="weekdays">По будням</option></select></label>
+        <label class="field"><span>Напомнить</span><select id="taskReminder"><option value="none">Не напоминать</option><option value="0">В момент начала</option><option value="10">За 10 минут</option><option value="30">За 30 минут</option><option value="60">За 1 час</option><option value="1440">За день</option></select></label>
+        <label class="field field-full"><span>Метки — через запятую</span><input id="taskTags" maxlength="220" placeholder="дом, важно, покупки" /></label>
+
+        <div class="field field-full"><span>Чек-лист</span><div id="subtaskList" class="subtask-editor"></div><button type="button" class="secondary-button compact" id="addSubtaskBtn">＋ Добавить пункт</button></div>
+
+        <div class="field field-full"><span>Цвет карточки</span><div class="color-row" id="taskColorPresets"></div><div class="custom-color-row"><input type="color" id="taskColor" value="#e8dcff" /><span>или выбрать вручную</span></div></div>
+        <label class="toggle-row field-full"><input type="checkbox" id="taskCalendarSync" /><span class="toggle-ui"></span><span><strong>Показывать в Google Calendar</strong><small>Синхронизируется только эта задача.</small></span></label>
+        <div class="modal-actions field-full"><button type="button" class="danger-link" id="deleteTaskBtn" hidden>Удалить</button><button type="button" class="secondary-button" id="archiveTaskBtn" hidden>В архив</button><div class="modal-actions-spacer"></div><button type="button" class="secondary-button" data-close="task">Отмена</button><button type="submit" class="primary-button">Сохранить</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="sprintModalBackdrop" hidden>
+    <section class="modal compact-modal" role="dialog" aria-modal="true">
+      <div class="modal-header"><div><div class="eyebrow">Планирование</div><h2 id="sprintModalTitle">Спринт</h2></div><button class="icon-button" data-close="sprint">✕</button></div>
+      <form id="sprintForm" class="form-grid">
+        <input type="hidden" id="sprintId" />
+        <label class="field field-full"><span>Название</span><input id="sprintName" required /></label>
+        <label class="field"><span>Длительность</span><select id="sprintDurationMode"><option value="1w">1 неделя</option><option value="2w">2 недели</option><option value="custom">Вручную</option></select></label>
+        <label class="field"><span>Начало</span><input type="date" id="sprintStart" required /></label>
+        <label class="field field-full" id="sprintEndField"><span>Конец</span><input type="date" id="sprintEnd" required /></label>
+        <div class="field field-full"><span>Цвет</span><div class="color-row" id="sprintColorPresets"></div><div class="custom-color-row"><input type="color" id="sprintColor" /><span>свой цвет</span></div></div>
+        <div class="modal-actions field-full"><button type="button" class="danger-link" id="deleteSprintBtn" hidden>Удалить</button><button type="button" class="secondary-button" id="completeSprintBtn" hidden>Завершить</button><div class="modal-actions-spacer"></div><button type="button" class="secondary-button" data-close="sprint">Отмена</button><button class="primary-button" type="submit">Сохранить</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="projectModalBackdrop" hidden>
+    <section class="modal compact-modal" role="dialog" aria-modal="true">
+      <div class="modal-header"><div><div class="eyebrow">Организация</div><h2 id="projectModalTitle">Проект</h2></div><button class="icon-button" data-close="project">✕</button></div>
+      <form id="projectForm" class="form-grid">
+        <input type="hidden" id="projectId" />
+        <label class="field field-full"><span>Название</span><input id="projectName" required /></label>
+        <div class="field field-full"><span>Цвет</span><div class="color-row" id="projectColorPresets"></div><div class="custom-color-row"><input type="color" id="projectColor" /><span>свой цвет</span></div></div>
+        <div class="modal-actions field-full"><button type="button" class="danger-link" id="deleteProjectBtn" hidden>Удалить</button><button type="button" class="secondary-button" id="archiveProjectBtn" hidden>В архив</button><div class="modal-actions-spacer"></div><button type="button" class="secondary-button" data-close="project">Отмена</button><button class="primary-button" type="submit">Сохранить</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="confirmBackdrop" hidden>
+    <section class="modal confirm-modal" role="dialog" aria-modal="true">
+      <h2 id="confirmTitle">Подтверждение</h2><p id="confirmText"></p>
+      <div class="modal-actions"><div class="modal-actions-spacer"></div><button class="secondary-button" id="confirmCancel">Отмена</button><button class="danger-button" id="confirmOk">Продолжить</button></div>
+    </section>
+  </div>
+
+  <input id="importInput" type="file" accept="application/json" hidden />
+  <div id="toastHost" class="toast-host" aria-live="polite"></div>
+  <script src="./app.js"></script>
+</body>
+</html>
